@@ -15,6 +15,8 @@ library(reshape2)
 library(hms)
 library(circular)
 ```
+#### github link: https://github.com/anranyao/project_620/tree/master
+
 
 #### Problem 1:
 (a) Studies have showed effects of screen time usage, such as associating with BMI[1], social media screen time usage associated with mental health [2]. We collected the data of screen time usage in order to study the possible behavioral patterns of individuals, and to give suggestions for reducing the screen time usage. Some of the possible patterns maybe the association between procrastination and daily screen time[3], social screen time and mental health[2].
