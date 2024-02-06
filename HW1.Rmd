@@ -1,0 +1,253 @@
+---
+title: "HW 1"
+author: "Anran Yao"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+library(reshape2)
+library(hms)
+library(circular)
+```
+
+#### Problem 1:
+(a) Studies have showed effects of screen time usage, such as associating with BMI[1], social media screen time usage associated with mental health [2]. We collected the data of screen time usage in order to study the possible behavioral patterns of individuals, and to give suggestions for reducing the screen time usage. Some of the possible patterns maybe the association between procrastination and daily screen time[3], social screen time and mental health[2].
+
+[1] Duch, H., Fisher, E. M., Ensari, I., & Harrington, A. (2013). Screen time use in children under 3 years old: a systematic review of correlates. International journal of behavioral nutrition and physical activity, 10, 1-10.
+
+[2] Barthorpe, A., Winstone, L., Mars, B., & Moran, P. (2020). Is social media screen time really associated with poor adolescent mental health? A time use diary study. Journal of affective disorders, 274, 864-870.
+
+[3] Hammoudi, S. F., Mreydem, H. W., Abou Ali, B. T., Saleh, N. O., Chung, S., Hallit, S., & Salameh, P. (2021). Smartphone screen time among university students in Lebanon and its association with insomnia, bedtime procrastination, and body mass index during the COVID-19 pandemic: a cross-sectional study. Psychiatry investigation, 18(9), 871.
+
+
+(b) The Informed Consent Form is used to recruit participants to a study. In our case, we recruited the students from biostats 620 for the study. An ICF usually contains study plans and how data are collected and used in the study. Given this information, the participants can understand their roles and be more adherence to the study, resulting in a better data quality.
+
+(c) Screen activity is recorded in real-time by the mobile device. We collected daily entries of total screen time: (Total.ST: total screen time in HH-MM format, and Total.ST.min: total screen time in MM format), social app screen time (Social.ST: social app screen time in HH-MM format, and Social.ST.min: social app screen time in MM format), total number of times the user picked up the phone (Pickups), and the time of the first pick-up (Pickup.1st). For the data of first pickup, we use the record after user’s wake-up to mark the beginning and end of the user’s day. We are using the screen time data over 34 days (from 12/24/2023 to 01/26/2024) stored in the mobile device.
+
+(d) Added new variables into the dataset
+
+```{r}
+dat<-read.csv("ScreenTime_AnranYao.csv") %>% slice_head(n = 34)
+head(dat)
+```
+
+#### Problem 2
+
+(a) Time series plots
+
+```{r}
+dat <- dat %>%
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y"),
+         Day = weekdays(Date, abbreviate = TRUE),
+         weekend = factor(Day %in% c("Sun", "Sat")))
+
+dat %>% 
+  ggplot(aes(x=Date,y=Total.ST.min)) +
+  geom_line(color="lightgrey") +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = rel(0.9)))+
+  labs(x="Date",y="Total Screentime (min)")
+```
+
+- Total Screen Time variates between about 50 to 1050. The highest value is on Jan 12, and lowest on Jan 03. The time series have a decreasing trend at the end of December and increase after Jan 05. 
+
+```{r}
+dat %>% 
+  ggplot(aes(x=Date,y=Social.ST.min)) +
+  geom_line(color="lightgrey") +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = rel(0.9)))+
+  labs(x="Date",y="Social Screentime (min)")
+```
+- Social Screen Time variates between about 0 to 150. The highest value is on Jan 16, and lowest on Jan 03. The time series fluctuates and doesn't have a particular pattern. 
+
+
+```{r}
+dat %>% 
+  ggplot(aes(x=Date,y=Pickups)) +
+  geom_line(color="lightgrey") +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = rel(0.9)))+
+  labs(x="Date",y="Numbers of Pickups")
+```
+- Numbers of Pickups variates between about 50 to more than 250. The highest value is on Dec 24, and lowest on Jan 20. The time series fluctuates and doesn't have a particular pattern, except three days from Dec 24 to Dec 26. 
+
+
+```{r}
+dat %>% 
+  ggplot(aes(x=Date,y=Daily.Duration.Use)) +
+  geom_line(color="lightgrey") +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = rel(0.9)))+
+  labs(x="Date",y="Daily Duration Per Use (min)")
+```
+
+- Daily Duration Per Use variates between about 2min to 40min. The highest value is on Jan 12, and lowest on Jan 3. The time series is getting more fluctuating.
+
+```{r}
+dat %>% 
+  ggplot(aes(x=Date,y=Daily.Social.Prop)) +
+  geom_line(color="lightgrey") +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = rel(0.9)))+
+  labs(x="Date",y="Daily Proportion of Social Screentime")
+```
+- Daily Proportion of Social Screentime variates between about 0% to 65%. The highest value is on Jan 1, and lowest on Jan 12. The time series is getting less fluctuating.
+
+(b) scatterplots
+
+```{r}
+dat %>% 
+  ggpairs(columns = c(3,5,6,8,9), progress = FALSE)+ theme_bw()
+```
+- We observed highest positive correlation between Daily Duration per Use and Total Screen Time(0.66), high negative correlation between Daily proportion of social screentime and total screen time(-0.58), high correlation between Social screentime and Daily proportion of social screentime(0.63), high negative correlation between daily pickups and daily duration per use. The scatter plots showed some linear trend.
+
+(c) Occupation time curve
+
+```{r}
+dat_melted <- melt(dat, id.vars = "Date", 
+                   measure.vars = c("Total.ST.min","Social.ST.min", "Pickups", 
+                                    "Daily.Social.Prop", "Daily.Duration.Use"))
+calculate_cdf <- function(ts, threshold) {
+  mean(ts >= threshold)
+}
+cdf_data <- data.frame()
+for (variable in c("Total.ST.min","Social.ST.min", "Pickups", 
+                                    "Daily.Social.Prop", "Daily.Duration.Use")) {
+  thresholds <- seq(min(dat[[variable]]), max(dat[[variable]]), length.out = 100)
+
+  # Calculate CDF for each threshold
+  cdf_values <- sapply(thresholds, function(c) calculate_cdf(dat[[variable]], c))
+
+  # Results
+  temp_df <- data.frame(
+    Date = rep(dat$Date[1], length(thresholds)),
+    threshold = thresholds,
+    cdf = cdf_values,
+    variable = rep(variable, length(thresholds))
+  )
+
+  cdf_data <- rbind(cdf_data, temp_df)
+}
+
+# Plot separate occupation time curves for each variable
+ggplot(cdf_data, aes(x = threshold, y = cdf)) +
+  geom_line(size = 1) +
+  labs(title = "Occupation Time Curve",
+       x = "Threshold (c)",
+       y = expression(p(x >= c))) +
+  facet_wrap(~variable, scales = "free", switch = "x", ncol = 3) +
+  theme_bw()
+```
+- The OTC for daily duration per use, daily social proportion and pickups showed that the participant is a less active person, while social screen time and total screen time shows that the person is an active person.
+
+(d) ACF
+```{r}
+variables_to_plot <- c("Total.ST.min", "Social.ST.min", "Pickups", "Daily.Social.Prop", "Daily.Duration.Use")
+par(mfrow = c(2, 3)) 
+acf(dat[["Total.ST.min"]], main = paste("ACF for", "Total.ST.min"), na.action = na.pass)
+acf(dat[["Social.ST.min"]], main = paste("ACF for", "Social.ST.min"), na.action = na.pass)
+acf(dat[["Pickups"]], main = paste("ACF for", "Pickups"), na.action = na.pass)
+acf(dat[["Daily.Social.Prop"]], main = paste("ACF for", "Daily.Social.Prop"), na.action = na.pass)
+acf(dat[["Daily.Duration.Use"]], main = paste("ACF for", "Daily.Duration.Use"), na.action = na.pass)
+```
+```{r}
+acf(dat[["Total.ST.min"]],plot=FALSE)
+acf(dat[["Social.ST.min"]], plot=FALSE)
+acf(dat[["Pickups"]], plot=FALSE)
+acf(dat[["Daily.Social.Prop"]], plot=FALSE)
+acf(dat[["Daily.Duration.Use"]], plot=FALSE)
+```
+
+
+- According to the autocorrelation values and cutoffs(2/sqrt(34)=0.343), we observed lag-5 autocorrelation ACF(5) of the increments for total screen time (estimate = 0.377). For Pickups the estimated lag-1 ACF of increments is 0.514, showing that the correlation between two adjacent days is 0.514.
+
+#### Problem 3
+
+(a) Transform (or covert) the time of first pickup to an angle ranged from 0 to 360 degree
+
+```{r}
+dat <- dat %>% mutate(Pickup.1st = strptime(Pickup.1st, format = "%H:%M"),
+                      Pickup.1st.degree = (hour(Pickup.1st)*60 +
+                                             minute(Pickup.1st))/(24*60)*360)
+pickup.cir <- circular(dat$Pickup.1st.degree, units = "degrees",
+                       template = "clock24")
+```
+
+(b) Scatterplot
+
+```{r}
+plot(pickup.cir)
+```
+
+- From the scatter plot we can see that most of the 1st pickup times happened between 7am and 11:30am, reflecting the wake up time of the participant. Some 1st pickup times happened at 6am and 12am to 2pm. The person may not have a pattern of waking up or differ due to the condition.
+
+(c) histogram
+
+```{r}
+plot(pickup.cir,stack = TRUE, bins = 36)
+```
+
+- We chose 36 as the bin size, indicating the 30 hour duration. We can see that the first pickups most frequently happened during 8:00-8:30AM.
+
+#### Problem 4
+
+(a) The inclusion of the factor \(S_t\) in the Poisson distribution accounts for the fact that the daily number of pickups \(Y_t\) is influenced by the total screen time \(S_t\) on that day. This modeling choice reflects the idea that the number of pickups is related to the amount of time people spend interacting with screens. \(S_t\) is like an offset variable, to scale the data and change the count variable to a rate.
+
+```{r}
+attach(dat)
+model1 <- glm(Pickups ~ offset(log(Total.ST.min)),family = "poisson")
+summary(model1)
+```
+
+- The maximum likelihood estimate \(\hat{\lambda}=exp(-1.91796)= 0.15\).
+- On average, the participant picked 0.15 times per hour during the 34 days.
+
+(c)
+
+```{r}
+Z_t<-dat$Date>="2024-01-10"
+
+model2<-glm(Pickups ~ offset(log(Total.ST.min))+ weekend + Z_t,family = "poisson")
+summary(model2)
+```
+- (c.1) P-value of the weekend variable is <0.001, we have evidence to reject the null hypothesis that there is no difference in behavior between weekdays and weekends. There is -0.19 decrease in the number of pickups for one-unit time on the weekends, comparing to weekdays.
+
+- (c.2) P-value of the weekend variable is <0.001, we have evidence to conclude that there is difference in behavior between winter semester and holiday, where the average number of pickups decrease 1.07 for one-unit time on winter semester, comparing to holiday.
+
+#### Problem 5
+
+(a)
+
+```{r}
+c(min(pickup.cir),max(pickup.cir))
+pickup.rad <- circular((pickup.cir)*pi/180-pi, units = "radians")
+c(min(pickup.rad),max(pickup.rad))
+estimate_rad <- mle.vonmises(pickup.rad)
+estimate_rad_mu <- estimate_rad$mu
+estimate_rad_lambda <- estimate_rad$kappa
+estimate_rad
+(estimate_rad_mu+pi)*180/pi
+```
+- We transform $y$ to the range of $[-\pi,\pi)$, which means transforming degrees to radians.
+- $\hat\mu = -0.5965$(rad), equals to $(-0.5965+\pi)*180/\pi=145.8253$(degree).
+- $\hat \lambda = 3.941$
+
+(b)
+```{r}
+degree <- (8*60+30)/(24*60)*360
+radians <- (-degree * (pi/180))-pi
+1- pvonmises(circular(radians),mu=estimate_rad_mu, kappa = estimate_rad_lambda)
+```
+- The probability of first pickup time at 8:30 AM or later is 0.005.
